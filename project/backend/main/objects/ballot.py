@@ -1,3 +1,10 @@
+import jsons
+from Crypto.Cipher import AES
+from base64 import b64encode, b64decode
+from Crypto.Random import get_random_bytes
+from backend.main.store.secret_registry import get_secret_bytes, UTF_8, overwrite_secret_str, gen_salt, get_secret_str, \
+    overwrite_secret_bytes
+
 class Ballot:
     """
     A ballot that exists in a specific, secret manner
@@ -8,7 +15,7 @@ class Ballot:
         self.voter_comments = voter_comments
 
 
-def generate_ballot_number() -> str:
+def generate_ballot_number(national_id: str) -> str:
     """
     Produces a ballot number. Feel free to add parameters to this method, if you feel those are necessary.
 
@@ -25,4 +32,21 @@ def generate_ballot_number() -> str:
     :return: A string representing a ballot number that satisfies the conditions above
     """
     # TODO: Implement this! Feel free to add parameters to this method, if necessary
-    raise NotImplementedError()
+    expected_bytes = 32 # For AES SIV 256
+    NAME_ENCRYPTION_KEY_AES_SIV = "MY_NAME_ENCRYPTION_KEY"
+    PEPPER_SECRET_NAME = "Encrypt SSN"
+
+    name_encryption_key = get_secret_bytes(NAME_ENCRYPTION_KEY_AES_SIV)
+
+    if not name_encryption_key:
+      name_encryption_key = get_random_bytes(expected_bytes * 2)
+      overwrite_secret_bytes(NAME_ENCRYPTION_KEY_AES_SIV, name_encryption_key)
+
+    nonce = get_random_bytes(expected_bytes)
+
+    cipher = AES.new(name_encryption_key, AES.MODE_SIV, nonce=nonce)
+
+    cipher.update(b"")
+    ciphertext, tag = cipher.encrypt_and_digest(national_id.encode(UTF_8))
+    json_v = [b64encode(x).decode(UTF_8) for x in (nonce, ciphertext, tag)]
+    return jsons.dumps(dict(zip(['nonce','ciphertext', 'tag'], json_v)))
