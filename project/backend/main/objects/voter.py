@@ -90,6 +90,14 @@ class MinimalVoter:
         self.obfuscated_first_name = obfuscated_first_name
         self.obfuscated_last_name = obfuscated_last_name
 
+class VoterStatus(Enum):
+    """
+    An enum that represents the current status of a voter.
+    """
+    NOT_REGISTERED = "not registered"
+    REGISTERED_NOT_VOTED = "registered, but no ballot received"
+    BALLOT_COUNTED = "ballot counted"
+    FRAUD_COMMITTED = "fraud committed"
 
 class Voter:
     """
@@ -97,10 +105,11 @@ class Voter:
     This class should only be used in the initial stages when requests come in; in the rest of the
     codebase, we should be using the ObfuscatedVoter class
     """
-    def __init__(self, first_name: str, last_name: str, national_id: str):
+    def __init__(self, first_name: str, last_name: str, national_id: str, voter_status: str = VoterStatus.NOT_REGISTERED.name):
         self.national_id = national_id
         self.first_name = first_name
         self.last_name = last_name
+        self.voter_status = voter_status
 
     def get_minimal_voter(self) -> MinimalVoter:
         """
@@ -110,16 +119,6 @@ class Voter:
             encrypt_name(self.first_name.strip()),
             encrypt_name(self.last_name.strip()),
             obfuscate_national_id(self.national_id))
-
-
-class VoterStatus(Enum):
-    """
-    An enum that represents the current status of a voter.
-    """
-    NOT_REGISTERED = "not registered"
-    REGISTERED_NOT_VOTED = "registered, but no ballot received"
-    BALLOT_COUNTED = "ballot counted"
-    FRAUD_COMMITTED = "fraud committed"
 
 
 class BallotStatus(Enum):

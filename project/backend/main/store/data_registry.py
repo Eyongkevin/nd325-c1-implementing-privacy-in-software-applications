@@ -8,6 +8,7 @@ from sqlite3 import Connection
 from typing import List
 
 from backend.main.objects.candidate import Candidate
+from backend.main.objects.voter import Voter, VoterStatus
 
 
 class VotingStore:
@@ -61,6 +62,9 @@ class VotingStore:
         self.connection.execute(
             """CREATE TABLE candidates (candidate_id integer primary key autoincrement, name text)""")
         # TODO: Add additional tables here, as you see fit
+        self.connection.execute(
+            """CREATE TABLE voters (national_id varchar primary key, first_name varchar, last_name varchar, voter_status varchar)"""
+        )
         self.connection.commit()
 
     def add_candidate(self, candidate_name: str):
@@ -97,4 +101,31 @@ class VotingStore:
     # TODO: If you create more tables in the create_tables method, feel free to add more methods here to make accessing
     #       data from those tables easier. See get_all_candidates, get_candidates and add_candidate for examples of how
     #       to do this.
+    def add_voter(self, first_name: str, last_name: str, national_id: str, voter_status: str = VoterStatus.REGISTERED_NOT_VOTED.name):
+        """
+        Adds a voter into the voter table, returning FALSE if already exist, else TRUE.
+        """
+        self.connection.execute("""INSERT INTO voters (national_id, first_name, last_name, voter_status) VALUES (?, ?, ?, ?)""", 
+        (national_id, first_name, last_name, voter_status))
+
+        self.connection.commit()
+
+    def get_voter(self, national_id: str) -> Voter:
+        """
+        Returns the voter specified, if that voter is registered. Otherwise returns None.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute("""SELECT * FROM voters WHERE national_id=?""", (national_id,))
+        voter_row = cursor.fetchone()
+        voter = Voter(voter_row[1], voter_row[2], national_id, voter_row[3]) if voter_row else None
+        self.connection.commit()
+
+        return voter
+
+    def remove_voter(self, national_id: str) -> bool:
+        """
+        Remove voter from the database
+        """
+        cursor = self.connection.cursor()
+        cursor.execute("""DELETE FROM voters WHERE national_id=?""", (national_id,))
 

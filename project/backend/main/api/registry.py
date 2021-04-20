@@ -3,7 +3,7 @@
 # This API should not be exposed as a REST API for election security purposes.
 #
 from typing import List
-from backend.main.objects.voter import Voter, VoterStatus
+from backend.main.objects.voter import Voter, VoterStatus, obfuscate_national_id
 from backend.main.objects.candidate import Candidate
 from backend.main.store.data_registry import VotingStore
 
@@ -22,7 +22,17 @@ def register_voter(voter: Voter) -> bool:
               (based on their National ID)
     """
     # TODO: Implement this!
-    raise NotImplementedError()
+    voter_obj = Voter(voter.first_name, voter.last_name, voter.national_id)
+
+    if get_voter_status(voter.national_id) == VoterStatus.NOT_REGISTERED:
+        store = VotingStore.get_instance()
+        store.add_voter(
+            voter_obj.get_minimal_voter().obfuscated_first_name, 
+            voter_obj.get_minimal_voter().obfuscated_last_name, 
+            voter_obj.get_minimal_voter().obfuscated_national_id
+        )
+        return True
+    return False
 
 
 def get_voter_status(voter_national_id: str) -> VoterStatus:
@@ -33,7 +43,12 @@ def get_voter_status(voter_national_id: str) -> VoterStatus:
     :returns: The status of the voter that best describes their situation
     """
     # TODO: Implement this!
-    raise NotImplementedError()
+    store = VotingStore.get_instance()
+    obfuscate_voter_national_id = obfuscate_national_id(voter_national_id)
+    voter = store.get_voter(obfuscate_voter_national_id)
+
+
+    return VoterStatus[voter.voter_status] if voter is not None else VoterStatus.NOT_REGISTERED
 
 
 def de_register_voter(voter_national_id: str) -> bool:
@@ -46,7 +61,17 @@ def de_register_voter(voter_national_id: str) -> bool:
     :returns: Boolean TRUE if de-registration was successful. Boolean FALSE otherwise.
     """
     # TODO: Implement this!
-    raise NotImplementedError()
+    voter_status = get_voter_status(voter_national_id)
+    if  voter_status== VoterStatus.NOT_REGISTERED.name or voter_status == VoterStatus.FRAUD_COMMITTED.name:
+        return False 
+    else: 
+        try:
+            obfuscate_voter_national_id = obfuscate_national_id(voter_national_id)
+            store = VotingStore.get_instance()
+            voter = store.remove_voter(obfuscate_voter_national_id)
+            return True
+        except:
+            return False
 
 
 #
